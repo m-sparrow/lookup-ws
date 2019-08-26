@@ -21,3 +21,6 @@ node index.js
 
 # Can I contribute
 Yes. You are welcome. via pull request.
+
+# Input Format
+TBD
