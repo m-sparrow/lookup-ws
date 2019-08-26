@@ -1,0 +1,11 @@
+exports.CREATE_BOARD = 'create-board';
+exports.JOIN_BOARD = 'join-board';
+exports.ADD_SECTION = 'add-section';
+exports.POST_LIKES_ON_SECTION = 'post-likes-on-section';
+exports.POST_DISLIKES_ON_SECTION = 'post-dislikes-on-section';
+exports.POST_CARDS = 'post-cards';
+exports.POST_COMMENT_ON_CARDS = 'post-comment-on-cards';
+exports.POST_CLAPS_ON_CARDS = 'post-claps-on-cards';
+exports.POST_DISAGREE_ON_CARDS = 'post-disagree-on-cards';
+exports.POST_CLAPS_ON_COMMENTS = 'post-claps-on-comments';
+exports.POST_DISAGRE_ON_COMMENTS = 'post-disagree-on-comments';
