@@ -1,6 +1,14 @@
 const Board = require('../models/board-model');
 const uuidv1 = require('uuid/v1');
 const constants = require('../constants/constants');
+const admin = require('firebase-admin');
+
+var serviceAccount = require('../lookup360.json');
+
+var firebaseAdmin = admin.initializeApp({
+	credential: admin.credential.cert(serviceAccount),
+	databaseURL: process.env.FIREBASE_DB_URL
+});
 
 var boards = new Map();
 
@@ -9,6 +17,7 @@ createBoard = (ws, msg) => {
 	board.save()
 	.then(item => {
 		var reply = {		
+			'replyCode': constants.SUCCESS,
 			'replyFor': constants.CREATE_BOARD,
 			'reply': {
 				'boardID': item._id
@@ -17,7 +26,8 @@ createBoard = (ws, msg) => {
 		ws.send(JSON.stringify(reply));
 	})
 	.catch(err => {
-		var reply = {		
+		var reply = {	
+			'replyCode': constants.FAILURE,
 			'replyFor': constants.CREATE_BOARD,
 			'reply': 'Oops! Something went wrong. Try again please.'
 		};
@@ -29,6 +39,7 @@ joinBoard = (ws, msg) => {
 	Board.findById(msg.boardID, function (err, item) {
 		if(err) {
 			var reply = {		
+				'replyCode': constants.FAILURE,
 				'replyFor': constants.JOIN_BOARD,
 				'reply': 'Oops! Something went wrong. Try again please.'
 			};
@@ -41,6 +52,7 @@ joinBoard = (ws, msg) => {
 			clients.set(ws.id, ws);
 			
 			var reply = {		
+				'replyCode': constants.SUCCESS,
 				'replyFor': constants.JOIN_BOARD,
 				'reply': item
 			};
@@ -171,13 +183,15 @@ postDisagreeOnComments = (ws, msg) => {
 updateBoard = (boardID, actionString, query, update, options) => {
 	Board.findOneAndUpdate(query, update, options, function(err, doc){
 		if(err) {
-			var reply = {		
+			var reply = {	
+				'replyCode': constants.FAILURE,
 				'replyFor': actionString,
 				'reply': 'Oops! Something went wrong. Try again please.'
 			};
 			ws.send(JSON.stringify(reply));
 		} else {
-			var reply = {		
+			var reply = {	
+				'replyCode': constants.SUCCESS,
 				'replyFor': actionString,
 				'reply': doc
 			};
@@ -192,32 +206,57 @@ updateBoard = (boardID, actionString, query, update, options) => {
 	});
 }
 
+unknownAction = (ws) => {
+	var reply = {		
+		'replyCode': constants.FAILURE,
+		'replyFor': constants.UNKNOWN_ACTION,
+		'reply': 'Unknown Action.'
+	};
+	ws.send(JSON.stringify(reply));
+}
+
+unauthorized = (ws) => {
+	var reply = {		
+		'replyCode': constants.FAILURE,
+		'replyFor': constants.UNAUTHORIZED,
+		'reply': 'Unauthorized'
+	};
+	ws.send(JSON.stringify(reply));
+}
+
 exports.app =  function(ws, req) {
-  ws.on('message', function(msg) {
-	  var meta = JSON.parse(msg);
-	  if(meta.action == constants.CREATE_BOARD) {
-		  createBoard(ws, meta.body);
-	  } else if(meta.action == constants.JOIN_BOARD) {
-		  joinBoard(ws, meta.body);
-	  } else if(meta.action == constants.ADD_SECTION) {
-		  addSection(ws,meta.body);
-	  } else if(meta.action == constants.POST_LIKES_ON_SECTION) {
-		  postLikesOnSection(ws, meta.body);
-	  } else if(meta.action == constants.POST_DISLIKES_ON_SECTION) {
-		  postDislikesOnSection(ws, meta.body);
-	  } else if(meta.action == constants.POST_CARDS) {
-		  postCards(ws, meta.body);
-	  } else if(meta.action == constants.POST_COMMENT_ON_CARDS) {
-		  postCommentOnCards(ws, meta.body);
-	  } else if(meta.action == constants.POST_CLAPS_ON_CARDS) {
-		  postClapsOnCards(ws, meta.body);
-	  } else if(meta.action == constants.POST_DISAGREE_ON_CARDS) {
-		  postDisagreeOnCards(ws, meta.body);
-	  } else if(meta.action == constants.POST_CLAPS_ON_COMMENTS) {
-		  postClapsOnComments(ws, meta.body);
-	  } else if(meta.action == POST_DISAGREE_ON_COMMENTS) {
-		  postDisagreeOnComments(ws, meta.body);
-	  } 
+  ws.on('message', function(msg) {	
+	var meta = JSON.parse(msg);  
+	admin.auth().verifyIdToken(meta.token)
+	.then(function(decodedToken) {		
+		  if(meta.action == constants.CREATE_BOARD) {
+			  createBoard(ws, meta.body);
+		  } else if(meta.action == constants.JOIN_BOARD) {
+			  joinBoard(ws, meta.body);
+		  } else if(meta.action == constants.ADD_SECTION) {
+			  addSection(ws,meta.body);
+		  } else if(meta.action == constants.POST_LIKES_ON_SECTION) {
+			  postLikesOnSection(ws, meta.body);
+		  } else if(meta.action == constants.POST_DISLIKES_ON_SECTION) {
+			  postDislikesOnSection(ws, meta.body);
+		  } else if(meta.action == constants.POST_CARDS) {
+			  postCards(ws, meta.body);
+		  } else if(meta.action == constants.POST_COMMENT_ON_CARDS) {
+			  postCommentOnCards(ws, meta.body);
+		  } else if(meta.action == constants.POST_CLAPS_ON_CARDS) {
+			  postClapsOnCards(ws, meta.body);
+		  } else if(meta.action == constants.POST_DISAGREE_ON_CARDS) {
+			  postDisagreeOnCards(ws, meta.body);
+		  } else if(meta.action == constants.POST_CLAPS_ON_COMMENTS) {
+			  postClapsOnComments(ws, meta.body);
+		  } else if(meta.action == constants.POST_DISAGRE_ON_COMMENTS) {
+			  postDisagreeOnComments(ws, meta.body);
+		  } else {
+			  unknownAction(ws);
+		  }
+	}).catch(function(error) {
+		unauthorized(ws);
+	});	  
   });
   
   ws.on('close', () => {

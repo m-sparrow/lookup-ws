@@ -9,3 +9,7 @@ exports.POST_CLAPS_ON_CARDS = 'post-claps-on-cards';
 exports.POST_DISAGREE_ON_CARDS = 'post-disagree-on-cards';
 exports.POST_CLAPS_ON_COMMENTS = 'post-claps-on-comments';
 exports.POST_DISAGRE_ON_COMMENTS = 'post-disagree-on-comments';
+exports.UNKNOWN_ACTION = 'unknown-action';
+exports.UNAUTHORIZED = 'unauthorized';
+exports.SUCCESS = '200';
+exports.FAILURE = '500';
