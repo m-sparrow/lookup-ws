@@ -12,12 +12,12 @@ var firebaseAdmin = admin.initializeApp({
 
 var boards = new Map();
 
-createBoard = (ws, msg) => {
-	let board = new Board({ boardName: msg.boardName, createdBy: msg.createdBy });
+createBoard = (ws, msg, user) => {
+	let board = new Board({ boardName: msg.boardName, author: user });
 	board.save()
 	.then(item => {
 		var reply = {		
-			'replyCode': constants.SUCCESS,
+			'status': constants.SUCCESS,
 			'replyFor': constants.CREATE_BOARD,
 			'reply': {
 				'boardID': item._id
@@ -27,7 +27,7 @@ createBoard = (ws, msg) => {
 	})
 	.catch(err => {
 		var reply = {	
-			'replyCode': constants.FAILURE,
+			'status': constants.FAILURE,
 			'replyFor': constants.CREATE_BOARD,
 			'reply': 'Oops! Something went wrong. Try again please.'
 		};
@@ -35,11 +35,11 @@ createBoard = (ws, msg) => {
 	});	
 }
 
-joinBoard = (ws, msg) => {
+joinBoard = (ws, msg, user) => {
 	Board.findById(msg.boardID, function (err, item) {
 		if(err) {
 			var reply = {		
-				'replyCode': constants.FAILURE,
+				'status': constants.FAILURE,
 				'replyFor': constants.JOIN_BOARD,
 				'reply': 'Oops! Something went wrong. Try again please.'
 			};
@@ -52,7 +52,7 @@ joinBoard = (ws, msg) => {
 			clients.set(ws.id, ws);
 			
 			var reply = {		
-				'replyCode': constants.SUCCESS,
+				'status': constants.SUCCESS,
 				'replyFor': constants.JOIN_BOARD,
 				'reply': item
 			};
@@ -62,10 +62,10 @@ joinBoard = (ws, msg) => {
 	});	
 }
 
-addSection = (ws, msg) => {
+addSection = (ws, msg, user) => {
 	var section = {
 		'section': msg.sectionName,
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { _id: msg.boardID };
@@ -76,9 +76,9 @@ addSection = (ws, msg) => {
 	
 }
 
-postLikesOnSection = (ws, msg) => {
+postLikesOnSection = (ws, msg, user) => {
 	var like = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID };
@@ -89,9 +89,9 @@ postLikesOnSection = (ws, msg) => {
 	
 }
 
-postDislikesOnSection = (ws, msg) => {
+postDislikesOnSection = (ws, msg, user) => {
 	var dislike = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID };
@@ -102,10 +102,10 @@ postDislikesOnSection = (ws, msg) => {
 	
 }
 
-postCards = (ws, msg) => {
+postCards = (ws, msg, user) => {
 	var post = {
 		'post': msg.post,
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID };
@@ -116,10 +116,10 @@ postCards = (ws, msg) => {
 	
 }
 
-postCommentOnCards = (ws, msg) => {
+postCommentOnCards = (ws, msg, user) => {
 	var comment = {
 		'comment': msg.comment,
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID,  'sections.posts._id': msg.postID};
@@ -129,9 +129,9 @@ postCommentOnCards = (ws, msg) => {
 	updateBoard(msg.boardID, constants.POST_COMMENT_ON_CARDS, query, update, options);
 }
 
-postClapsOnCards = (ws, msg) => {
+postClapsOnCards = (ws, msg, user) => {
 	var claps = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID,  'sections.posts._id': msg.postID};
@@ -142,9 +142,9 @@ postClapsOnCards = (ws, msg) => {
 }
 
 
-postDisagreeOnCards = (ws, msg) => {
+postDisagreeOnCards = (ws, msg, user) => {
 	var disagree = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID,  'sections.posts._id': msg.postID};
@@ -154,9 +154,9 @@ postDisagreeOnCards = (ws, msg) => {
 	updateBoard(msg.boardID, constants.POST_DISAGREE_ON_CARDS, query, update, options);
 }
 
-postClapsOnComments = (ws, msg) => {
+postClapsOnComments = (ws, msg, user) => {
 	var claps = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID,  'sections.posts._id': msg.postID, 'sections.posts.comments._id': msg.commentID};
@@ -167,9 +167,9 @@ postClapsOnComments = (ws, msg) => {
 }
 
 
-postDisagreeOnComments = (ws, msg) => {
+postDisagreeOnComments = (ws, msg, user) => {
 	var disagree = {
-		'createdBy': msg.createdBy
+		'author': user
 	}
 		
 	var query = { '_id': msg.boardID, 'sections._id': msg.sectionID,  'sections.posts._id': msg.postID, 'sections.posts.comments._id': msg.commentID};
@@ -184,14 +184,14 @@ updateBoard = (boardID, actionString, query, update, options) => {
 	Board.findOneAndUpdate(query, update, options, function(err, doc){
 		if(err) {
 			var reply = {	
-				'replyCode': constants.FAILURE,
+				'status': constants.FAILURE,
 				'replyFor': actionString,
 				'reply': 'Oops! Something went wrong. Try again please.'
 			};
 			ws.send(JSON.stringify(reply));
 		} else {
 			var reply = {	
-				'replyCode': constants.SUCCESS,
+				'status': constants.SUCCESS,
 				'replyFor': actionString,
 				'reply': doc
 			};
@@ -208,7 +208,7 @@ updateBoard = (boardID, actionString, query, update, options) => {
 
 unknownAction = (ws) => {
 	var reply = {		
-		'replyCode': constants.FAILURE,
+		'status': constants.FAILURE,
 		'replyFor': constants.UNKNOWN_ACTION,
 		'reply': 'Unknown Action.'
 	};
@@ -217,7 +217,7 @@ unknownAction = (ws) => {
 
 unauthorized = (ws) => {
 	var reply = {		
-		'replyCode': constants.FAILURE,
+		'status': constants.FAILURE,
 		'replyFor': constants.UNAUTHORIZED,
 		'reply': 'Unauthorized'
 	};
@@ -228,29 +228,34 @@ exports.app =  function(ws, req) {
   ws.on('message', function(msg) {	
 	var meta = JSON.parse(msg);  
 	admin.auth().verifyIdToken(meta.token)
-	.then(function(decodedToken) {		
+	.then(function(decodedToken) {	
+		  var user = {
+			  'displayName': decodedToken.name,
+			  'pic': decodedToken.picture,
+			  'uid': decodedToken.uid
+		  }
 		  if(meta.action == constants.CREATE_BOARD) {
-			  createBoard(ws, meta.body);
+			  createBoard(ws, meta.body, user);
 		  } else if(meta.action == constants.JOIN_BOARD) {
-			  joinBoard(ws, meta.body);
+			  joinBoard(ws, meta.body, user);
 		  } else if(meta.action == constants.ADD_SECTION) {
-			  addSection(ws,meta.body);
+			  addSection(ws,meta.body, user);
 		  } else if(meta.action == constants.POST_LIKES_ON_SECTION) {
-			  postLikesOnSection(ws, meta.body);
+			  postLikesOnSection(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_DISLIKES_ON_SECTION) {
-			  postDislikesOnSection(ws, meta.body);
+			  postDislikesOnSection(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_CARDS) {
-			  postCards(ws, meta.body);
+			  postCards(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_COMMENT_ON_CARDS) {
-			  postCommentOnCards(ws, meta.body);
+			  postCommentOnCards(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_CLAPS_ON_CARDS) {
-			  postClapsOnCards(ws, meta.body);
+			  postClapsOnCards(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_DISAGREE_ON_CARDS) {
-			  postDisagreeOnCards(ws, meta.body);
+			  postDisagreeOnCards(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_CLAPS_ON_COMMENTS) {
-			  postClapsOnComments(ws, meta.body);
+			  postClapsOnComments(ws, meta.body, user);
 		  } else if(meta.action == constants.POST_DISAGRE_ON_COMMENTS) {
-			  postDisagreeOnComments(ws, meta.body);
+			  postDisagreeOnComments(ws, meta.body, user);
 		  } else {
 			  unknownAction(ws);
 		  }
